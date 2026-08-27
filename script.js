@@ -1,7 +1,7 @@
 const STORAGE_KEY = "tarjetaFidelidadData";
 
 const defaultData = {
-  cliente: "Kiara González Roberts",
+  cliente: "Luis Rivas Castro",
   codigo: "CLIENTE-001",
   sellos: 1,
   totalSellos: 10
