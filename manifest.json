@@ -1,0 +1,17 @@
+{
+  "name": "FESTEC 2026 · Tarjeta de Fidelidad",
+  "short_name": "FESTEC",
+  "description": "Tarjeta de fidelidad responsive con progreso guardado localmente.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F7F4D5",
+  "theme_color": "#0A3323",
+  "icons": [
+    {
+      "src": "img/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

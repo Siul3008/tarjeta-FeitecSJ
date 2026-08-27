@@ -1,0 +1,403 @@
+:root {
+  /* Paleta oficial visible en LINEA FESTEC 2026.xlsx */
+  --beige: #F7F4D5;
+  --navy: #1C2B48;
+  --dark-green: #0A3323;
+  --midnight-green: #105666;
+  --moss-green: #839958;
+  --dusty-rose: #D3968C;
+
+  --paper: #FBF9EA;
+  --ink: #123F3C;
+  --soft-line: rgba(10, 51, 35, 0.18);
+  --shadow: 0 18px 45px rgba(10, 51, 35, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  min-height: 100%;
+  background: var(--beige);
+}
+
+body {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  color: var(--dark-green);
+  font-family: Arial, Helvetica, sans-serif;
+
+  position: relative;
+  isolation: isolate;
+
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(14px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(14px, env(safe-area-inset-left));
+
+  background:
+    radial-gradient(circle at 16% 6%, rgba(255, 255, 255, 0.62), transparent 23%),
+    radial-gradient(circle at 86% 16%, rgba(131, 153, 88, 0.10), transparent 24%),
+    linear-gradient(180deg, #FCFAEC 0%, var(--beige) 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url("img/fondo.jpg") no-repeat center center;
+  background-size: cover;
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: -1;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.page {
+  width: min(100%, 470px);
+  margin: 0 auto;
+}
+
+/* TARJETA PRINCIPAL */
+.loyalty-card {
+  width: min(92vw, 430px);
+  margin: 0 auto;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--soft-line);
+  border-radius: clamp(16px, 4vw, 22px);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+.loyalty-card::before {
+  content: "";
+  display: block;
+  height: 9px;
+  background:
+    linear-gradient(
+      90deg,
+      var(--dark-green) 0 26%,
+      var(--midnight-green) 26% 52%,
+      var(--moss-green) 52% 77%,
+      var(--dusty-rose) 77% 100%
+    );
+}
+
+/* ENCABEZADO / LOGO */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: clamp(150px, 40vw, 190px);
+  padding: clamp(22px, 7vw, 34px) 18px 30px;
+  position: relative;
+  background:
+    linear-gradient(145deg, rgba(247, 244, 213, 0.98), rgba(251, 249, 234, 0.98));
+  border-bottom: 1px solid var(--soft-line);
+}
+
+.card-header::after {
+  content: "BARRIO AMÓN · CARMEN · SAN JOSÉ";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 10px;
+  color: var(--midnight-green);
+  font-size: clamp(0.56rem, 2.4vw, 0.72rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-align: center;
+}
+
+.logo {
+  width: clamp(155px, 51vw, 220px);
+  max-height: 130px;
+  height: auto;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+
+/* SELLOS */
+.stamps-section {
+  padding: clamp(22px, 6vw, 30px);
+  border-bottom: 1px solid var(--soft-line);
+  background:
+    linear-gradient(rgba(131, 153, 88, 0.06), rgba(131, 153, 88, 0.06)),
+    var(--moss-green);
+}
+
+.stamps {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: clamp(9px, 2.7vw, 15px);
+}
+
+.stamp {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 2px solid rgba(20, 75, 54, 0.22);
+  border-radius: 50%;
+  background: #FFFEF5;
+  box-shadow: inset 0 -2px 0 rgba(10, 51, 35, 0.04);
+  cursor: pointer;
+  position: relative;
+  transition:
+    transform 120ms ease,
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.stamp:active {
+  transform: scale(0.92);
+}
+
+.stamp.filled {
+  border-color: var(--dark-green);
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255,255,255,.16), transparent 23%),
+    var(--moss-green);
+  box-shadow:
+    inset 0 -3px 0 rgba(10, 51, 35, 0.18),
+    0 4px 10px rgba(10, 51, 35, 0.14);
+}
+
+.stamp.filled::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--beige);
+  font-size: clamp(18px, 5.8vw, 30px);
+  font-weight: 900;
+}
+
+/* CLIENTE */
+.customer-section {
+  min-height: clamp(145px, 38vw, 190px);
+  padding: clamp(20px, 5.5vw, 28px);
+  background: var(--paper);
+}
+
+.customer-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--dusty-rose);
+  font-size: clamp(0.8rem, 3.5vw, 0.95rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.customer-name {
+  margin: 0;
+  color: var(--dark-green);
+  font-size: clamp(1.55rem, 7vw, 2.15rem);
+  font-weight: 500;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+/* CÓDIGO */
+.code-section {
+  display: flex;
+  justify-content: center;
+  padding: 18px clamp(18px, 5vw, 28px) clamp(28px, 7vw, 36px);
+  background:
+    linear-gradient(180deg, rgba(131,153,88,.035), transparent);
+}
+
+.barcode-card {
+  width: min(100%, 335px);
+  padding: 14px 14px 10px;
+  border: 1px solid var(--soft-line);
+  border-radius: 8px;
+  background: #FFFEF7;
+  box-shadow: 0 4px 14px rgba(10, 51, 35, 0.09);
+  text-align: center;
+}
+
+.barcode {
+  width: 100%;
+  height: clamp(62px, 17vw, 82px);
+  border-inline: 15px solid var(--navy);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      var(--navy) 0 3px,
+      transparent 3px 6px,
+      var(--navy) 6px 8px,
+      transparent 8px 12px,
+      var(--navy) 12px 17px,
+      transparent 17px 20px
+    );
+}
+
+.customer-code {
+  margin-top: 8px;
+  color: var(--midnight-green);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.barcode-card p {
+  margin: 6px 0 0;
+  color: var(--dark-green);
+  font-size: clamp(0.8rem, 3.5vw, 0.95rem);
+}
+
+/* CONTROLES */
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: min(92vw, 430px);
+  margin: 16px auto 0;
+}
+
+.button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.button-primary {
+  background: var(--dark-green);
+  color: var(--beige);
+}
+
+.button-secondary {
+  color: var(--dark-green);
+  background: var(--beige);
+  border: 1px solid rgba(10, 51, 35, 0.22);
+}
+
+.hint {
+  width: min(92vw, 430px);
+  margin: 12px auto 0;
+  color: var(--midnight-green);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* DIÁLOGO */
+.dialog {
+  width: min(92vw, 400px);
+  border: 1px solid var(--soft-line);
+  border-radius: 18px;
+  padding: 0;
+  background: var(--paper);
+  color: var(--dark-green);
+  box-shadow: var(--shadow);
+}
+
+.dialog::backdrop {
+  background: rgba(28, 43, 72, 0.46);
+  backdrop-filter: blur(4px);
+}
+
+.dialog-content {
+  display: grid;
+  gap: 10px;
+  padding: 22px;
+}
+
+.dialog-content h2 {
+  margin: 0 0 8px;
+  color: var(--dark-green);
+}
+
+.dialog-content label {
+  color: var(--midnight-green);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.dialog-content input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(16, 86, 102, 0.30);
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+  background: #FFFEF7;
+  color: var(--dark-green);
+}
+
+.dialog-content input:focus {
+  border-color: var(--midnight-green);
+  box-shadow: 0 0 0 3px rgba(16, 86, 102, 0.10);
+}
+
+.dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* TELÉFONOS MUY PEQUEÑOS */
+@media (max-width: 350px) {
+  .stamps-section {
+    padding-inline: 14px;
+  }
+
+  .stamps {
+    gap: 7px;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  .card-header::after {
+    letter-spacing: 0.08em;
+  }
+}
+
+/* TABLET / PC */
+@media (min-width: 768px) {
+  body {
+    padding-top: 38px;
+    padding-bottom: 38px;
+  }
+}
+
+@media (hover: hover) {
+  .stamp:hover {
+    transform: translateY(-2px);
+    border-color: var(--moss-green);
+  }
+
+  .button:hover {
+    filter: brightness(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
