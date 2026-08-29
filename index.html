@@ -5,77 +5,110 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0A3323" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Tarjeta" />
-
-  <title>FESTEC 2026 · Tarjeta de Fidelidad</title>
-
+  <meta name="apple-mobile-web-app-title" content="FESTEC" />
+  <meta name="description" content="Tarjeta de fidelidad oficial de FESTEC San José 2026." />
+  <title>FESTEC SJ 2026 · Tarjeta de fidelidad</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="img/logo.png" />
   <link rel="apple-touch-icon" href="img/logo.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
-  <main class="page">
-    <section class="loyalty-card" aria-label="Tarjeta de fidelidad">
-      <header class="card-header">
-        <img class="logo" src="img/logo.png" alt="FESTEC SJO 2026" />
-      </header>
+  <main class="app-shell">
+    <header class="brand-header">
+      <img class="logo" src="img/logo.png" alt="FESTEC San José 2026" />
+      <p>Barrio Amón · Carmen · San José</p>
+    </header>
 
-      <section class="stamps-section">
-        <div id="stamps" class="stamps" aria-label="Sellos de fidelidad"></div>
-      </section>
-
-      <section class="customer-section">
-        <span class="customer-label">CLIENTE</span>
-        <h1 id="customerName" class="customer-name">Luis Rivas Castro</h1>
-      </section>
-
-      <section class="code-section">
-        <div class="barcode-card">
-          <div class="barcode" aria-hidden="true"></div>
-          <div id="customerCode" class="customer-code">CLIENTE-001</div>
-          <p>Muestra el código al encargado</p>
-        </div>
-      </section>
+    <section id="loadingView" class="panel status-panel" aria-live="polite">
+      <span class="loader" aria-hidden="true"></span><p>Preparando tu tarjeta…</p>
     </section>
 
-    <section class="controls" aria-label="Controles de demostración">
-      <button id="editCustomerBtn" class="button button-primary" type="button">
-        Cambiar cliente
-      </button>
-      <button id="resetBtn" class="button button-secondary" type="button">
-        Reiniciar sellos
-      </button>
-    </section>
-
-    <p class="hint">
-      Toca los círculos para marcar o desmarcar sellos. El progreso se guarda en este dispositivo.
-    </p>
-  </main>
-
-  <dialog id="customerDialog" class="dialog">
-    <form id="customerForm" method="dialog" class="dialog-content">
-      <h2>Datos del cliente</h2>
-
-      <label for="nameInput">Nombre</label>
-      <input id="nameInput" name="name" type="text" maxlength="60" required />
-
-      <label for="codeInput">Código</label>
-      <input id="codeInput" name="code" type="text" maxlength="30" required />
-
-      <div class="dialog-actions">
-        <button id="cancelDialogBtn" class="button button-secondary" type="button">
-          Cancelar
-        </button>
-        <button class="button button-primary" type="submit">
-          Guardar
-        </button>
+    <section id="authView" class="panel view" hidden>
+      <div class="welcome-copy">
+        <span class="eyebrow">TU RUTA FESTEC</span>
+        <h1>Una visita, un sello, una experiencia más.</h1>
+        <p>Ingresa para ver tu tarjeta o crea una cuenta para comenzar.</p>
       </div>
-    </form>
-  </dialog>
+      <div class="auth-tabs" role="tablist" aria-label="Acceso a la cuenta">
+        <button id="loginTab" class="auth-tab active" type="button" role="tab" aria-selected="true">Ingresar</button>
+        <button id="registerTab" class="auth-tab" type="button" role="tab" aria-selected="false">Registrarme</button>
+      </div>
+      <form id="loginForm" class="form-stack">
+        <label for="loginEmail">Correo electrónico</label>
+        <input id="loginEmail" name="email" type="email" autocomplete="email" required />
+        <label for="loginPassword">Contraseña</label>
+        <input id="loginPassword" name="password" type="password" autocomplete="current-password" minlength="8" required />
+        <button class="button button-primary" type="submit">Iniciar sesión</button>
+      </form>
+      <form id="registerForm" class="form-stack" hidden>
+        <label for="registerName">Nombre completo</label>
+        <input id="registerName" name="name" type="text" autocomplete="name" minlength="2" maxlength="80" required />
+        <label for="registerEmail">Correo electrónico</label>
+        <input id="registerEmail" name="email" type="email" autocomplete="email" required />
+        <label for="registerPassword">Contraseña</label>
+        <input id="registerPassword" name="password" type="password" autocomplete="new-password" minlength="8" required />
+        <p class="field-help">Usa al menos 8 caracteres.</p>
+        <button class="button button-primary" type="submit">Crear mi tarjeta</button>
+      </form>
+    </section>
 
-  <script src="script.js"></script>
+    <section id="clientView" class="view" hidden>
+      <div class="loyalty-card">
+        <div class="card-topline"></div>
+        <section class="stamps-section">
+          <div class="section-heading"><span class="eyebrow">MI PROGRESO</span><strong id="stampCounter">0 de 10</strong></div>
+          <div id="stamps" class="stamps" aria-label="Sellos de fidelidad"></div>
+        </section>
+        <section class="customer-section">
+          <span class="customer-label">CLIENTE</span>
+          <h1 id="customerName" class="customer-name"></h1>
+          <p>Tu código personal es único y no se puede modificar.</p>
+        </section>
+        <section class="qr-section">
+          <div class="qr-card">
+            <div id="customerQr" class="qr-code" aria-label="Código QR del cliente"></div>
+            <div id="customerCode" class="customer-code"></div>
+            <p>Muéstralo al encargado para recibir un sello.</p>
+          </div>
+        </section>
+      </div>
+      <div class="session-actions">
+        <button id="refreshClientBtn" class="button button-secondary" type="button">Actualizar tarjeta</button>
+        <button class="button button-text logout-button" type="button">Cerrar sesión</button>
+      </div>
+    </section>
+
+    <section id="staffView" class="view" hidden>
+      <div class="panel staff-panel">
+        <div class="section-heading staff-heading">
+          <div><span class="eyebrow">PANEL DE ENCARGADO</span><h1>Registrar una visita</h1></div>
+          <button class="button button-text logout-button" type="button">Salir</button>
+        </div>
+        <p class="staff-intro">Escanea el QR o escribe el código que aparece en la tarjeta del cliente.</p>
+        <div id="reader" class="reader" hidden></div>
+        <button id="scannerBtn" class="button button-primary" type="button">Activar cámara</button>
+        <div class="manual-lookup">
+          <span>o buscar manualmente</span>
+          <form id="lookupForm" class="lookup-form">
+            <label class="sr-only" for="lookupCode">Código del cliente</label>
+            <input id="lookupCode" name="code" type="text" placeholder="FST-8F3K2M9Q" maxlength="12" autocomplete="off" required />
+            <button class="button button-secondary" type="submit">Buscar</button>
+          </form>
+        </div>
+        <article id="clientResult" class="client-result" hidden>
+          <span class="eyebrow">CLIENTE ENCONTRADO</span>
+          <h2 id="resultName"></h2>
+          <p><strong id="resultStamps">0</strong> de 10 sellos</p>
+          <code id="resultCode"></code>
+          <button id="addStampBtn" class="button button-accent" type="button">Agregar sello</button>
+        </article>
+      </div>
+    </section>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </main>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
+  <script src="script.js" defer></script>
 </body>
 </html>

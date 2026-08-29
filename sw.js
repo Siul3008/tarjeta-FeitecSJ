@@ -1,4 +1,4 @@
-const CACHE_NAME = "tarjeta-fidelidad-v1";
+const CACHE_NAME = "festec-fidelidad-v2";
 
 const APP_FILES = [
   "./",
@@ -6,7 +6,8 @@ const APP_FILES = [
   "./styles.css",
   "./script.js",
   "./manifest.json",
-  "./img/logo.png"
+  "./img/logo.png",
+  "./img/fondo.jpg"
 ];
 
 self.addEventListener("install", (event) => {
@@ -37,20 +38,14 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      return fetch(event.request).then((networkResponse) => {
+    fetch(event.request).then((networkResponse) => {
+      if (networkResponse.ok && new URL(event.request.url).origin === self.location.origin) {
         const copy = networkResponse.clone();
-
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, copy);
         });
-
-        return networkResponse;
-      });
-    })
+      }
+      return networkResponse;
+    }).catch(() => caches.match(event.request))
   );
 });

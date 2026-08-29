@@ -1,7 +1,7 @@
 {
   "name": "FESTEC 2026 · Tarjeta de Fidelidad",
   "short_name": "FESTEC",
-  "description": "Tarjeta de fidelidad responsive con progreso guardado localmente.",
+  "description": "Tarjeta de fidelidad oficial de FESTEC San José 2026.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#F7F4D5",
