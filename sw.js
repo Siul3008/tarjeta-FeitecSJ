@@ -1,10 +1,10 @@
-const CACHE_NAME = "festec-fidelidad-v2";
+const CACHE_NAME = "festec-fidelidad-v3-20260829-1";
 
 const APP_FILES = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./script.js",
+  "./styles.css?v=20260829-1",
+  "./script.js?v=20260829-1",
   "./manifest.json",
   "./img/logo.png",
   "./img/fondo.jpg"
@@ -20,16 +20,17 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    )
+    Promise.all([
+      caches.keys().then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key))
+        )
+      ),
+      self.clients.claim()
+    ])
   );
-
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
@@ -38,7 +39,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    fetch(event.request).then((networkResponse) => {
+    fetch(event.request, { cache: "no-store" }).then((networkResponse) => {
       if (networkResponse.ok && new URL(event.request.url).origin === self.location.origin) {
         const copy = networkResponse.clone();
         caches.open(CACHE_NAME).then((cache) => {

@@ -213,4 +213,22 @@ function normalizeCode(value) { return String(value || "").trim().toUpperCase().
 function handleError(error) { if (/sesión|token|autentic/i.test(error.message)) { clearSession(); showView("authView"); } showToast(error.message, true); }
 function showToast(message, isError = false) { clearTimeout(toastTimer); const toast = $("#toast"); toast.textContent = message; toast.classList.toggle("error", isError); toast.hidden = false; toastTimer = setTimeout(() => { toast.hidden = true; }, 4500); }
 
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    let reloading = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (reloading) return;
+      reloading = true;
+      window.location.reload();
+    });
+
+    try {
+      const registration = await navigator.serviceWorker.register("./sw.js?v=20260829-1", {
+        updateViaCache: "none"
+      });
+      await registration.update();
+    } catch (_) {
+      // La aplicación sigue funcionando en línea aunque falle el modo PWA.
+    }
+  });
+}
