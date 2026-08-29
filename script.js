@@ -198,7 +198,16 @@ async function withSubmit(form, task) {
 function saveSession(data) { session = { token: data.token, role: data.role }; localStorage.setItem(SESSION_KEY, JSON.stringify(session)); }
 function readSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (_) { return null; } }
 function clearSession() { session = null; localStorage.removeItem(SESSION_KEY); }
-async function logout() { await stopScanner(); clearSession(); selectedClient = null; $("#clientResult").hidden = true; showView("authView"); }
+async function logout() {
+  await stopScanner();
+  if (session?.token) {
+    try { await api("logout", {}, true); } catch (_) {}
+  }
+  clearSession();
+  selectedClient = null;
+  $("#clientResult").hidden = true;
+  showView("authView");
+}
 function showView(id) { views.forEach((viewId) => { $(`#${viewId}`).hidden = viewId !== id; }); }
 function normalizeCode(value) { return String(value || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, ""); }
 function handleError(error) { if (/sesión|token|autentic/i.test(error.message)) { clearSession(); showView("authView"); } showToast(error.message, true); }

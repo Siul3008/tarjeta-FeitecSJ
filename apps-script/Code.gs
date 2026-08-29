@@ -18,10 +18,13 @@ function doGet() {
 
 function doPost(e) {
   try {
-    const request = JSON.parse((e && e.postData && e.postData.contents) || "{}");
+    const contents = (e && e.postData && e.postData.contents) || "{}";
+    if (contents.length > 10000) throw new Error("Solicitud demasiado grande.");
+    const request = JSON.parse(contents);
     const routes = {
       register: () => register_(request),
       login: () => login_(request),
+      logout: () => logout_(request),
       me: () => me_(request),
       getClient: () => getClient_(request),
       addStamp: () => addStamp_(request)
@@ -45,9 +48,11 @@ function setup() {
   }
   const email = properties.getProperty("ADMIN_EMAIL");
   const password = properties.getProperty("ADMIN_PASSWORD");
-  if (email && password && !findUserByEmail_(email)) {
-    validatePassword_(password);
-    createUser_("Encargado FESTEC", email, password, "encargado");
+  if (email && password) {
+    if (!findUserByEmail_(email)) {
+      validatePassword_(password);
+      createUser_("Encargado FESTEC", email, password, "encargado");
+    }
     properties.deleteProperty("ADMIN_PASSWORD");
   }
 }
@@ -67,11 +72,26 @@ function register_(request) {
 
 function login_(request) {
   const email = cleanEmail_(request.email);
+  if (typeof request.password !== "string" || request.password.length > 128) {
+    throw new Error("Correo o contraseña incorrectos.");
+  }
   const user = findUserByEmail_(email);
   if (!user || !constantTimeEqual_(user.passwordHash, hashPassword_(String(request.password || ""), user.salt))) {
     throw new Error("Correo o contraseña incorrectos.");
   }
   return createSession_(user);
+}
+
+function logout_(request) {
+  if (!request.token) return { loggedOut: true };
+  const tokenHash = hashToken_(String(request.token));
+  const sheet = getSheet_(CONFIG.SESSIONS_SHEET);
+  const rows = sheetObjects_(CONFIG.SESSIONS_SHEET)
+    .filter((session) => constantTimeEqual_(String(session.tokenHash), tokenHash))
+    .map((session) => session.row)
+    .sort((a, b) => b - a);
+  rows.forEach((row) => sheet.deleteRow(row));
+  return { loggedOut: true };
 }
 
 function me_(request) {
@@ -94,7 +114,7 @@ function addStamp_(request) {
   try {
     const client = findUserByCode_(code);
     if (!client || client.role !== "cliente") throw new Error("No se encontró ese cliente.");
-    const previous = Number(client.stamps) || 0;
+    const previous = client.stamps;
     if (previous >= CONFIG.MAX_STAMPS) throw new Error("La tarjeta ya está completa.");
     const next = previous + 1;
     getSheet_(CONFIG.USERS_SHEET).getRange(client.row, 7).setValue(next);
@@ -116,7 +136,7 @@ function createSession_(user) {
   const token = randomToken_() + randomToken_();
   const expires = new Date(Date.now() + CONFIG.SESSION_HOURS * 60 * 60 * 1000);
   getSheet_(CONFIG.SESSIONS_SHEET).appendRow([hashToken_(token), user.id, expires, new Date()]);
-  return { token: token, role: user.role || user.rol, expiresAt: expires.toISOString() };
+  return { token: token, role: user.role, expiresAt: expires.toISOString() };
 }
 
 function requireSession_(token) {
@@ -132,16 +152,31 @@ function requireSession_(token) {
 
 function requireStaff_(token) {
   const user = requireSession_(token);
-  if ((user.role || user.rol) !== "encargado") throw new Error("Esta acción requiere una cuenta de encargado.");
+  if (user.role !== "encargado") throw new Error("Esta acción requiere una cuenta de encargado.");
   return user;
 }
 
-function findUserByEmail_(email) { return sheetObjects_(CONFIG.USERS_SHEET).find((user) => cleanEmail_(user.correo) === cleanEmail_(email)); }
-function findUserByCode_(code) { return sheetObjects_(CONFIG.USERS_SHEET).find((user) => String(user.codigo).toUpperCase() === code); }
-function findUserById_(id) { return sheetObjects_(CONFIG.USERS_SHEET).find((user) => String(user.id) === id); }
+function findUserByEmail_(email) { return userObjects_().find((user) => user.email === cleanEmail_(email)); }
+function findUserByCode_(code) { return userObjects_().find((user) => user.code === code); }
+function findUserById_(id) { return userObjects_().find((user) => user.id === id); }
 
 function publicUser_(user) {
-  return { id: user.id, name: user.nombre || user.name, email: user.correo || user.email, code: user.codigo || user.code, stamps: Number(user.sellos ?? user.stamps) || 0, role: user.rol || user.role };
+  return { id: user.id, name: user.name, email: user.email, code: user.code, stamps: user.stamps, role: user.role };
+}
+
+function userObjects_() {
+  return sheetObjects_(CONFIG.USERS_SHEET).map((row) => ({
+    row: row.row,
+    id: String(row.id),
+    name: String(row.nombre || "").trim(),
+    email: String(row.correo || "").trim().toLowerCase(),
+    passwordHash: String(row.passwordHash || ""),
+    salt: String(row.salt || ""),
+    code: String(row.codigo || "").trim().toUpperCase(),
+    stamps: normalizeStamps_(row.sellos),
+    role: String(row.rol || "").trim().toLowerCase(),
+    createdAt: row.creadoEn
+  }));
 }
 
 function sheetObjects_(sheetName) {
@@ -183,6 +218,7 @@ function cleanName_(value) { const name = String(value || "").trim().replace(/\s
 function cleanEmail_(value) { const email = String(value || "").trim().toLowerCase(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 160) throw new Error("Escribe un correo válido."); return email; }
 function cleanCode_(value) { const code = String(value || "").trim().toUpperCase(); if (!/^FST-[A-Z0-9]{8}$/.test(code)) throw new Error("El código no tiene un formato válido."); return code; }
 function validatePassword_(password) { if (typeof password !== "string" || password.length < 8 || password.length > 128) throw new Error("La contraseña debe tener entre 8 y 128 caracteres."); }
+function normalizeStamps_(value) { const stamps = Math.floor(Number(value) || 0); return Math.max(0, Math.min(CONFIG.MAX_STAMPS, stamps)); }
 
 function cleanupSessions_() {
   const sheet = getSheet_(CONFIG.SESSIONS_SHEET);
@@ -196,5 +232,17 @@ function getSpreadsheet_() {
   return SpreadsheetApp.openById(id);
 }
 function getSheet_(name) { const sheet = getSpreadsheet_().getSheetByName(name); if (!sheet) throw new Error("Falta la hoja " + name + ". Ejecuta setup()."); return sheet; }
-function ensureSheet_(spreadsheet, name, headers) { const sheet = spreadsheet.getSheetByName(name) || spreadsheet.insertSheet(name); if (sheet.getLastRow() === 0) { sheet.appendRow(headers); sheet.setFrozenRows(1); sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold"); } }
+function ensureSheet_(spreadsheet, name, headers) {
+  const sheet = spreadsheet.getSheetByName(name) || spreadsheet.insertSheet(name);
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(headers);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+    return;
+  }
+  const actualHeaders = sheet.getRange(1, 1, 1, headers.length).getValues()[0].map(String);
+  if (actualHeaders.some((header, index) => header !== headers[index])) {
+    throw new Error("Los encabezados de la hoja " + name + " no coinciden con la configuración esperada.");
+  }
+}
 function json_(payload) { return ContentService.createTextOutput(JSON.stringify(payload)).setMimeType(ContentService.MimeType.JSON); }
