@@ -12,12 +12,17 @@ const USER_HEADERS = ["id", "nombre", "correo", "passwordHash", "salt", "codigo"
 const SESSION_HEADERS = ["tokenHash", "userId", "venceEn", "creadoEn"];
 const AUDIT_HEADERS = ["fecha", "encargadoId", "clienteId", "codigo", "sellosAnteriores", "sellosNuevos"];
 
+let spreadsheetCache_ = null;
+let sheetCache_ = {};
+let userObjectsCache_ = null;
+
 function doGet() {
   return json_({ ok: true, data: { service: "FESTEC SJ 2026", status: "online" } });
 }
 
 function doPost(e) {
   try {
+    userObjectsCache_ = null;
     const contents = (e && e.postData && e.postData.contents) || "{}";
     if (contents.length > 10000) throw new Error("Solicitud demasiado grande.");
     const request = JSON.parse(contents);
@@ -76,15 +81,21 @@ function login_(request) {
     throw new Error("Correo o contraseña incorrectos.");
   }
   const user = findUserByEmail_(email);
-  if (!user || !constantTimeEqual_(user.passwordHash, hashPassword_(String(request.password || ""), user.salt))) {
+  const credentialKey = credentialCacheKey_(email, request.password);
+  const cachedUserId = CacheService.getScriptCache().get(credentialKey);
+  const cachedLoginIsValid = user && cachedUserId === user.id;
+  const passwordIsValid = cachedLoginIsValid || (user && constantTimeEqual_(user.passwordHash, hashPassword_(request.password, user.salt)));
+  if (!passwordIsValid) {
     throw new Error("Correo o contraseña incorrectos.");
   }
+  CacheService.getScriptCache().put(credentialKey, user.id, 21600);
   return createSession_(user);
 }
 
 function logout_(request) {
   if (!request.token) return { loggedOut: true };
   const tokenHash = hashToken_(String(request.token));
+  CacheService.getScriptCache().remove("session:" + tokenHash);
   const sheet = getSheet_(CONFIG.SESSIONS_SHEET);
   const rows = sheetObjects_(CONFIG.SESSIONS_SHEET)
     .filter((session) => constantTimeEqual_(String(session.tokenHash), tokenHash))
@@ -128,25 +139,37 @@ function createUser_(name, email, password, role) {
   const code = role === "cliente" ? generateUniqueCode_() : "";
   const id = Utilities.getUuid();
   getSheet_(CONFIG.USERS_SHEET).appendRow([id, name, cleanEmail_(email), hashPassword_(password, salt), salt, code, 0, role, new Date()]);
+  CacheService.getScriptCache().put(credentialCacheKey_(cleanEmail_(email), password), id, 21600);
   return { id: id, name: name, email: cleanEmail_(email), code: code, stamps: 0, role: role };
 }
 
 function createSession_(user) {
-  cleanupSessions_();
+  cleanupSessionsIfNeeded_();
   const token = randomToken_() + randomToken_();
   const expires = new Date(Date.now() + CONFIG.SESSION_HOURS * 60 * 60 * 1000);
-  getSheet_(CONFIG.SESSIONS_SHEET).appendRow([hashToken_(token), user.id, expires, new Date()]);
+  const tokenHash = hashToken_(token);
+  getSheet_(CONFIG.SESSIONS_SHEET).appendRow([tokenHash, user.id, expires, new Date()]);
+  CacheService.getScriptCache().put("session:" + tokenHash, JSON.stringify({ userId: user.id, expiresAt: expires.getTime() }), 21600);
   return { token: token, role: user.role, expiresAt: expires.toISOString() };
 }
 
 function requireSession_(token) {
   if (!token) throw new Error("Sesión no válida.");
-  const rows = sheetObjects_(CONFIG.SESSIONS_SHEET);
   const tokenHash = hashToken_(String(token));
+  const cachedSession = CacheService.getScriptCache().get("session:" + tokenHash);
+  if (cachedSession) {
+    const sessionData = JSON.parse(cachedSession);
+    if (Number(sessionData.expiresAt) > Date.now()) {
+      const cachedUser = findUserById_(String(sessionData.userId));
+      if (cachedUser) return cachedUser;
+    }
+  }
+  const rows = sheetObjects_(CONFIG.SESSIONS_SHEET);
   const session = rows.find((row) => constantTimeEqual_(String(row.tokenHash), tokenHash));
   if (!session || new Date(session.venceEn).getTime() <= Date.now()) throw new Error("Tu sesión venció. Ingresa de nuevo.");
   const user = findUserById_(String(session.userId));
   if (!user) throw new Error("Sesión no válida.");
+  CacheService.getScriptCache().put("session:" + tokenHash, JSON.stringify({ userId: user.id, expiresAt: new Date(session.venceEn).getTime() }), 21600);
   return user;
 }
 
@@ -165,7 +188,8 @@ function publicUser_(user) {
 }
 
 function userObjects_() {
-  return sheetObjects_(CONFIG.USERS_SHEET).map((row) => ({
+  if (userObjectsCache_) return userObjectsCache_;
+  userObjectsCache_ = sheetObjects_(CONFIG.USERS_SHEET).map((row) => ({
     row: row.row,
     id: String(row.id),
     name: String(row.nombre || "").trim(),
@@ -177,6 +201,7 @@ function userObjects_() {
     role: String(row.rol || "").trim().toLowerCase(),
     createdAt: row.creadoEn
   }));
+  return userObjectsCache_;
 }
 
 function sheetObjects_(sheetName) {
@@ -210,6 +235,10 @@ function hashPassword_(password, salt) {
 }
 
 function hashToken_(token) { return bytesToHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, token, Utilities.Charset.UTF_8)); }
+function credentialCacheKey_(email, password) {
+  const pepper = PropertiesService.getScriptProperties().getProperty("PASSWORD_PEPPER") || "";
+  return "credential:" + hashToken_(email + "|" + password + "|" + pepper);
+}
 function bytesToHex_(bytes) { return bytes.map((byte) => (byte < 0 ? byte + 256 : byte).toString(16).padStart(2, "0")).join(""); }
 function constantTimeEqual_(left, right) { left = String(left); right = String(right); let diff = left.length ^ right.length; const length = Math.max(left.length, right.length); for (let i = 0; i < length; i += 1) diff |= (left.charCodeAt(i % (left.length || 1)) || 0) ^ (right.charCodeAt(i % (right.length || 1)) || 0); return diff === 0; }
 function randomToken_() { return Utilities.base64EncodeWebSafe(Utilities.getUuid() + Utilities.getUuid()).replace(/=+$/, ""); }
@@ -226,12 +255,27 @@ function cleanupSessions_() {
   rows.forEach((row) => sheet.deleteRow(row));
 }
 
+function cleanupSessionsIfNeeded_() {
+  const cache = CacheService.getScriptCache();
+  if (cache.get("sessions-cleaned")) return;
+  cleanupSessions_();
+  cache.put("sessions-cleaned", "1", 21600);
+}
+
 function getSpreadsheet_() {
+  if (spreadsheetCache_) return spreadsheetCache_;
   const id = PropertiesService.getScriptProperties().getProperty("SPREADSHEET_ID");
   if (!id) throw new Error("Falta la propiedad SPREADSHEET_ID.");
-  return SpreadsheetApp.openById(id);
+  spreadsheetCache_ = SpreadsheetApp.openById(id);
+  return spreadsheetCache_;
 }
-function getSheet_(name) { const sheet = getSpreadsheet_().getSheetByName(name); if (!sheet) throw new Error("Falta la hoja " + name + ". Ejecuta setup()."); return sheet; }
+function getSheet_(name) {
+  if (sheetCache_[name]) return sheetCache_[name];
+  const sheet = getSpreadsheet_().getSheetByName(name);
+  if (!sheet) throw new Error("Falta la hoja " + name + ". Ejecuta setup().");
+  sheetCache_[name] = sheet;
+  return sheet;
+}
 function ensureSheet_(spreadsheet, name, headers) {
   const sheet = spreadsheet.getSheetByName(name) || spreadsheet.insertSheet(name);
   if (sheet.getLastRow() === 0) {
